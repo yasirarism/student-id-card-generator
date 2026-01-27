@@ -134,14 +134,27 @@ async function generateCard(params, set) {
 
     // clg info
     const countryIndex = parseInt(params.country || '0');
-    const countries = Object.keys(colleges);
-    const selectedCountry = countries[countryIndex] || countries[0];
-    const collegeData = colleges[selectedCountry] ? colleges[selectedCountry][0] : null;
-    const collegeName = collegeData ? collegeData.name : 'Westminster International University in Tashkent';
-    const address = collegeData ? collegeData.address : '628, Kanaikhali, Natore';
+const countries = Object.keys(colleges);
+const selectedCountry = countries[countryIndex] || countries[0];
+
+const collegeData = colleges[selectedCountry] ? colleges[selectedCountry][0] : null;
+
+const hasCustomName = typeof params.clgName === 'string' && params.clgName.trim() !== '';
+const hasCustomAdd  = typeof params.clgAdd === 'string' && params.clgAdd.trim() !== '';
+
+const collegeName = (hasCustomName && hasCustomAdd)
+    ? params.clgName.trim()
+    : (collegeData ? collegeData.name : 'Westminster International University in Tashkent');
+
+const address = (hasCustomName && hasCustomAdd)
+    ? params.clgAdd.trim()
+    : (collegeData ? collegeData.address : '628, Kanaikhali, Natore');
+
 
     // dob format
-    const formattedDate = formatDate(params.dob || '2001-01-25');
+   // const formattedDate = formatDate(params.dob || '2001-01-25');
+   
+   const formattedDate = params.dob || '2001-01-25';
 
     // Draw text based on tmplate
     if (set === 'set2') {
@@ -276,13 +289,26 @@ app.all('/generate', async (req, res) => {
 
 
         const canvas = await generateCard(params, set);
+        const buffer = canvas.toBuffer('image/png');
 
+
+// Check rawByte flag
+const showRaw = params.rawByte == 1;
+
+if (showRaw) {
+    res.setHeader('Content-Type', 'application/json');
+
+    return res.json({
+        success: true,
+        type: "raw-bytes",
+        format: "image/png",
+        size: buffer.length,
+        data: buffer.toString('base64') // raw bytes encoded for JSON
+    });
+}
 
         res.setHeader('Content-Type', 'image/png');
         res.setHeader('Content-Disposition', 'inline; filename="student_id_card.png"');
-
-
-        const buffer = canvas.toBuffer('image/png');
         res.send(buffer);
 
     } catch (error) {
@@ -295,6 +321,7 @@ app.all('/generate', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         message: 'Student ID Card Generator API',
+        version: '1.6.9',
         endpoints: {
             generate: '/generate (GET or POST)',
         },
@@ -304,7 +331,9 @@ app.get('/', (req, res) => {
             id: 'optional - ID format (1=numeric, 2=alphanumeric, default: 1)',
             academicyear: 'optional - Academic year (default: 2025-2028)',
             opacity: 'optional - Center icon opacity (default: 0.1)',
-            country: 'optional - Country index (default: 0)',
+            country: 'optional - Country index (default: 0). Country selection is optional when you want to use custom college name',
+            clgName: 'optional - Custom College Name',
+            clgAdd: 'Custom College Address | Required if you want to use Custom College Name',
             principal: 'optional - Principal name (default: Osama Aziz)',
             template: 'optional - Template (1 or 2, default: 1)',
             style: 'optional - Style (1 to 6, default: 2)',
@@ -313,7 +342,8 @@ app.get('/', (req, res) => {
             issue_date: 'optional - Issue date (default: 15 AUG 2025)',
             issue_txt: 'optional - Issue text (default: Date Of Issue)',
             exp_date: 'optional - Expiry date (default: 31 DEC 2025)',
-            exp_txt: 'optional - Expiry text (default: Card Expires)'
+            exp_txt: 'optional - Expiry text (default: Card Expires)',
+            rawByte: '2 (Default) - Normal PNG Image. 1 - Show Raw image byte Data.'
         }
     });
 });
