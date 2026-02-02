@@ -8,6 +8,15 @@ const bwipjs = require('bwip-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+});
+
+
 
 registerFont(path.join(__dirname, 'public/times.ttf'), { family: 'Times' });
 registerFont(path.join(__dirname, 'public/times.ttf'), { family: 'Arial' });
@@ -763,4 +772,5 @@ app.get('/barcode', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Student ID Card Generator API running on port ${PORT}`);
 });
+
 
