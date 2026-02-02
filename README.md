@@ -23,9 +23,9 @@
 
 **♻️ API TEMP S2**: [http://sicg.vercel.app/gen?template=2&style=4](https://sicg.vercel.app/gen?name=John%20Doe&dob=1999-05-15&template=2&style=4&opacity=0.4)
 
-**♻️ API | HAND HOLDING 1**: [http://sicg.vercel.app/handGen?hand=1](https://icardc2.vercel.app/handGen?studentName=JASON%20MILLER&schoolName=Springfield%20Prep%20Charter%20School&studentEmail=jane@tech.edu&studentDept=Physical%20Education%20Department&validThru=JUN%202027&schoolLogo=/logo.png&studentPhoto=/student.png&hand=1)
+**♻️ API | HAND HOLDING 1**: [http://sicg.vercel.app/handGen?hand=1](https://sicg.vercel.app/handGen?studentName=JASON%20MILLER&schoolName=Springfield%20Prep%20Charter%20School&studentEmail=jane@tech.edu&studentDept=Physical%20Education%20Department&validThru=JUN%202027&schoolLogo=/logo.png&studentPhoto=/student.png&hand=1)
 
-**♻️ API | HAND HOLDING 2**: [http://sicg.vercel.app/handGen?hand=2](https://icardc2.vercel.app/handGen?studentName=JASON%20MILLER&schoolName=Springfield%20Prep%20Charter%20School&studentEmail=jane@tech.edu&studentDept=Physical%20Education%20Department&validThru=JUN%202027&schoolLogo=/logo.png&studentPhoto=/student.png&hand=2)
+**♻️ API | HAND HOLDING 2**: [http://sicg.vercel.app/handGen?hand=2](https://sicg.vercel.app/handGen?studentName=JASON%20MILLER&schoolName=Springfield%20Prep%20Charter%20School&studentEmail=jane@tech.edu&studentDept=Physical%20Education%20Department&validThru=JUN%202027&schoolLogo=/logo.png&studentPhoto=/student.png&hand=2)
 
 **📝 API USAGE** : [CHECK](API-USAGE.md)
 
