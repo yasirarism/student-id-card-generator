@@ -734,6 +734,33 @@ app.get('/', (req, res) => {
     });
 });
 
+
+
+app.get('/barcode', (req, res) => {
+  try {
+    bwipjs.toBuffer({
+      bcid:        'code128',       // Barcode type
+      text:        req.query.text || '1234567890', // Text to encode
+      scale: 3,
+            height: 12,
+            includetext: false,
+            padding: 10,
+            backgroundcolor: 'CDCDCF'
+    }, (err, png) => {
+      if (err) {
+        res.status(500).send('Barcode generation error');
+      } else {
+        res.type('image/png');
+        res.send(png);
+      }
+    });
+  } catch (e) {
+    res.status(500).send('Server error');
+  }
+});
+
+
 app.listen(PORT, () => {
     console.log(`Student ID Card Generator API running on port ${PORT}`);
 });
+
