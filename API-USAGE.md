@@ -14,6 +14,7 @@ https://sicg.vercel.app
 ## Features
 
 - 2 templates, 6 variants each
+- 2 Hand Holding Templates
 - Student Name
 - College Name
 - College Logo
@@ -24,23 +25,24 @@ https://sicg.vercel.app
 - Date of Issue
 - Valid Until
 - 130+ Country Supported
+- PNG image or raw base64 output
 - Support for both GET and POST requests
 
 ## API Endpoints
 
 ### Health Check
 ```
-GET /
+GET /health
 ```
 Returns API information and available parameters.
 
 ### Generate ID Card
 ```
-GET /generate
-POST /generate
+GET or POST : /gen
+GET or POST : /handGen
 ```
 
-## Parameters
+## Simple Card `/gen` Parameters
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -60,6 +62,23 @@ POST /generate
 | `issue_txt` | string | No | `Date Of Issue` | Issue date label |
 | `exp_date` | string | No | `31 DEC 2025` | Card expiration date |
 | `exp_txt` | string | No | `Card Expires` | Expiration label (only for template 1) |
+| `rawByte` | string | No | `2` | 2 = PNG image, 1 = raw byte JSON |
+
+
+## Hand Holding `/handGen` Parameters
+
+| Parameter      | Required | Default                                       | Description                    |
+| -------------- | -------- | --------------------------------------------- | ------------------------------ |
+| `schoolName`   | No       | Springfield Prep Charter School               | School name                    |
+| `studentName`  | No       | JASON MILLER                                  | Student name                   |
+| `studentEmail` | No       | [UN82728191@un.edu](mailto:UN82728191@un.edu) | Student email                  |
+| `studentDept`  | No       | Physical Education Department                 | Department                     |
+| `validThru`    | No       | DEC 2028                                      | Valid thru date                |
+| `idNumber`     | No       | Auto-generated                                | Student ID                     |
+| `schoolLogo`   | No       | —                                             | Logo URL or base64             |
+| `studentPhoto` | No       | —                                             | Photo URL or base64            |
+| `hand`         | No       | `1`                                           | Handwritten style (`1` or `2`) |
+| `rawByte`      | No       | `2`                                           | `1` = base64 JSON response     |
 
 ## Country ID Table
 
@@ -116,158 +135,21 @@ Use the `country` parameter with the corresponding ID to select a university fro
 
 ## Usage Examples
 
-### Example 1: Basic GET Request
+Why do you need example code, huh?😡 Bruh I’m not providing any example code.
+bcz if you’re planning to use or deploy this API, you should already know what you’re doing.
 
-Generate a simple ID card with minimal parameters:
+If you need copy paste examples to figure it out, this probably isnt for you yet.
 
-```bash
-curl "https://sicg.vercel.app/generate?name=John%20Doe"
-```
+Docs are here. Endpoints are here.
+The rest is called experience. Good luck😴
 
-### Example 2: GET Request with Multiple Parameters
-
-```bash
-curl "https://sicg.vercel.app/generate?name=Jane%20Smith&dob=2000-05-15&country=5&academicyear=2024-2027&template=2&style=3" --output student_card.png
-```
-
-### Example 3: POST Request (JSON)
-
-```bash
-curl -X POST https://sicg.vercel.app/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Alice Johnson",
-    "dob": "1999-08-20",
-    "country": 20,
-    "academicyear": "2023-2026",
-    "template": "1",
-    "style": "4",
-    "id": "2",
-    "principal": "Dr. Smith",
-    "issue_date": "01 SEP 2023",
-    "exp_date": "31 AUG 2026"
-  }' \
-  --output alice_card.png
-```
-
-### Example 4: POST Request with Custom Images
-
-```bash
-curl -X POST https://sicg.vercel.app/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Bob Wilson",
-    "student_photo": "https://example.com/photos/bob.jpg",
-    "college_logo": "https://example.com/logos/university.png",
-    "country": 129,
-    "template": "2"
-  }' \
-  --output bob_card.png
-```
-
-### Example 5: JavaScript/Node.js
-
-```javascript
-const axios = require('axios');
-const fs = require('fs');
-
-async function generateIDCard() {
-  const response = await axios({
-    method: 'get',
-    url: 'https://sicg.vercel.app/generate',
-    params: {
-      name: 'Sarah Connor',
-      dob: '2001-12-25',
-      country: 129,
-      academicyear: '2024-2027',
-      template: '1',
-      style: '2'
-    },
-    responseType: 'arraybuffer'
-  });
-  
-  fs.writeFileSync('student_card.png', response.data);
-  console.log('ID card generated successfully!');
-}
-
-generateIDCard();
-```
-
-### Example 6: Python
-
-```python
-import requests
-
-url = "https://sicg.vercel.app/generate"
-params = {
-    "name": "Michael Chen",
-    "dob": "2002-03-10",
-    "country": 23,
-    "academicyear": "2025-2028",
-    "template": "2",
-    "style": "5"
-}
-
-response = requests.get(url, params=params)
-
-if response.status_code == 200:
-    with open("student_card.png", "wb") as f:
-        f.write(response.content)
-    print("ID card generated successfully!")
-else:
-    print(f"Error: {response.status_code}")
-```
-
-### Example 7: Direct Browser Access
-
-Simply paste this URL in your browser:
-
-```
-https://sicg.vercel.app/generate?name=David%20Lee&country=60&template=1&style=3
-```
-
-The image will be displayed directly in the browser.
-
-### Example 8: HTML Image Tag
-
-```html
-<img src="https://sicg.vercel.app/generate?name=Emma%20Brown&country=128&template=2&style=1" 
-     alt="Student ID Card" 
-     width="640" 
-     height="402">
-```
-
-## Response
-
-The API returns a PNG image with:
-- **Content-Type:** `image/png`
-- **Dimensions:** 1280x804 pixels
-- The image is returned directly and can be saved or displayed
-
-## Error Response
-
-If required parameters are missing or an error occurs:
-
-```json
-{
-  "error": "Name parameter is required"
-}
-```
-
-or
-
-```json
-{
-  "error": "Failed to generate ID card",
-  "message": "Detailed error message"
-}
-```
 
 ## Template & Style Preview
 
 - **Template 1:** Classic design with red accents
 - **Template 2:** Modern design with shadow effects
 - **Styles 1-6:** Different color schemes and layouts for each template
+- **Hand:** Hand Holding Id Card Templates
 
 ## Technical Details
 
@@ -278,5 +160,5 @@ or
 
 ***
 
-**API Version:** 1.0.2
-**Last Updated:** October 2025
+**API Version:** 2.0.0
+**Last Updated:** February 2026
