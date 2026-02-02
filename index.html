@@ -1565,6 +1565,7 @@ document.getElementById("college").addEventListener("change", function () {
 
             // school logo
             const schoolLogoImg = new Image();
+            schoolLogoImg.crossOrigin = "anonymous";
             schoolLogoImg.src = uploadedLogo || 'public/logo.png';
             await new Promise((resolve) => {
                 schoolLogoImg.onload = resolve;
@@ -1601,6 +1602,7 @@ document.getElementById("college").addEventListener("change", function () {
 
             // student photo
             const studentPhotoImg = new Image();
+            studentPhotoImg.crossOrigin = "anonymous";
             studentPhotoImg.src = uploadedImage || 'public/student.png';
             await new Promise((resolve) => {
                 studentPhotoImg.onload = resolve;
@@ -1676,6 +1678,7 @@ document.getElementById("college").addEventListener("change", function () {
             // barcode
             const idNumber = document.getElementById('studentId').value || generateStudentId();
             const barcodeImg = new Image();
+            barcodeImg.crossOrigin = "anonymous";
             barcodeImg.src = `https://sicg.vercel.app/barcode?text=${encodeURIComponent(idNumber)}`;
             
             await new Promise((resolve) => {
@@ -1751,10 +1754,11 @@ document.getElementById("college").addEventListener("change", function () {
             link.click();
         });
         
+        
         document.getElementById('downloadBtn3').addEventListener('click', function() {
             const canvas = document.getElementById(`template3Canvas${selectedTemplate3}`);
             const link = document.createElement('a');
-            link.download = `holding_student_id_card_style_${selectedTemplate3}.png`;
+            link.download = `holding_s_id_card_style_${selectedTemplate3}.jpeg`;
             link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
         });
