@@ -26,6 +26,7 @@ registerFont(path.join(__dirname, 'public/AlexBrush-Regular.ttf'), { family: 'Al
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 
 
@@ -697,8 +698,12 @@ if (showRaw) {
     }
 });
 
-// Health
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Health
+app.get('/health', (req, res) => {
     res.json({
         message: 'Student ID Card Generator API',
         version: '2.0.0',
