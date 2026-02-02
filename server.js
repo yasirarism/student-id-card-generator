@@ -3,12 +3,14 @@ const { createCanvas, loadImage, registerFont } = require('canvas');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const bwipjs = require('bwip-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 
 registerFont(path.join(__dirname, 'public/times.ttf'), { family: 'Times' });
+registerFont(path.join(__dirname, 'public/times.ttf'), { family: 'Arial' });
 registerFont(path.join(__dirname, 'public/AlexBrush-Regular.ttf'), { family: 'AlexBrush' });
 
 // Middleware
@@ -16,6 +18,374 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+
+
+
+async function generateCode128Barcode(data, width, height) {
+    try {
+        const png = await bwipjs.toBuffer({
+            bcid: 'code128',
+            text: String(data),
+            scale: 3,
+            height: 12,
+            includetext: false,
+            padding: 10,
+            backgroundcolor: 'CDCDCF'
+        });
+
+        const img = await loadImage(png);
+
+        if (!img) {
+            throw new Error('loadImage() returned null');
+        }
+
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        return canvas;
+    } catch (err) {
+        console.error('Barcode generation failed:', err);
+        return null;
+    }
+}
+
+function splitSchoolName(name) {
+    name = name.trim();
+    if (name.length <= 16) return [name];
+
+    const words = name.split(' ');
+    if (words.length === 1) return [name];
+
+    const firstTwoWordsLen = words[0].length + 1 + words[1].length;
+
+    if (firstTwoWordsLen > 16) {
+        return [words[0] + ' ' + words[1], words.slice(2).join(' ')];
+    } else {
+        let line1 = words[0];
+        let idx = 1;
+        while (idx < words.length && (line1.length + 1 + words[idx].length) <= 16) {
+            line1 += ' ' + words[idx];
+            idx++;
+        }
+        return [line1, words.slice(idx).join(' ')];
+    }
+}
+
+
+function drawRotated(ctx, x, y, angleDeg, drawFn) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angleDeg * Math.PI / 180);
+    drawFn(ctx);
+    ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function generateRandomID() {
+    let digits = "";
+    for (let i = 0; i < 6; i++) digits += Math.floor(Math.random() * 10);
+    return "UN" + digits;
+}
+
+async function loadImageFromSource2(source) {
+    if (!source) return null;
+    
+    try {
+        if (source.startsWith('http://') || source.startsWith('https://')) {
+            
+            const response = await fetch(source);
+            const arrayBuffer = await response.arrayBuffer();
+            return await loadImage(Buffer.from(arrayBuffer));
+        } else if (source.startsWith('data:image')) {
+            const base64Data = source.split(',')[1];
+            const buffer = Buffer.from(base64Data, 'base64');
+            return await loadImage(buffer);
+        } else {
+            
+            return await loadImage(source);
+        }
+    } catch (error) {
+        console.error('Failed to load image:', error);
+        return null;
+    }
+}
+
+async function generateCard2(params) {
+    const publicPath = path.join(__dirname, '..', 'public');
+    
+    
+    const templateImg = await loadImage('public/card.png');
+    const canvas = createCanvas(templateImg.width, templateImg.height);
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(templateImg, 0, 0);
+
+    
+    const defaultLogoImg = await loadImage('public/logo.png');
+    const defaultStudentImg = await loadImage('public/student.png');
+
+    
+    let schoolLogoImg = defaultLogoImg;
+    if (params.schoolLogo) {
+        const customLogo = await loadImageFromSource2(params.schoolLogo);
+        if (customLogo) schoolLogoImg = customLogo;
+    }
+
+    
+    let studentPhotoImg = defaultStudentImg;
+    if (params.studentPhoto) {
+        const customPhoto = await loadImageFromSource2(params.studentPhoto);
+        if (customPhoto) studentPhotoImg = customPhoto;
+    }
+
+    // school logo
+    drawRotated(ctx, 210, 120, 0, (ctx) => {
+        const W = 150, H = 100, inset = 0, radius = 0;
+        roundRect(ctx, inset, inset, W - inset * 2, H - inset * 2, radius);
+        ctx.clip();
+        ctx.drawImage(schoolLogoImg, 0, 0, schoolLogoImg.width, schoolLogoImg.height, inset, inset, W - inset * 2, H - inset * 2);
+    });
+
+    // school name
+    const schoolName = params.schoolName || 'Springfield Prep Charter School';
+    const schoolNameLines = splitSchoolName(schoolName);
+    drawRotated(ctx, 390, 130, 0, (ctx) => {
+        ctx.fillStyle = "white";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.font = "bold 46px Arial";
+        ctx.fillText(schoolNameLines[0], 0, 0);
+        if (schoolNameLines.length > 1 && schoolNameLines[1].trim() !== "") {
+        	ctx.fillStyle = "#809D55";
+            ctx.font = "bold 33px Arial";
+            ctx.fillText(schoolNameLines[1], 0, 49);
+        }
+    });
+
+    // student photo
+    drawRotated(ctx, 332, 256, -0.2, (ctx) => {
+        const W = 328, H = 385, inset = 12, radius = 10;
+        roundRect(ctx, inset, inset, W - inset * 2, H - inset * 2, radius);
+        ctx.clip();
+        ctx.drawImage(studentPhotoImg, 0, 0, studentPhotoImg.width, studentPhotoImg.height, inset, inset, W - inset * 2, H - inset * 2);
+    });
+
+    // student name
+    const studentName = params.studentName || 'JASON MILLER';
+    drawRotated(ctx, 490, 710, 0, (ctx) => {
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "bold 56px Arial";
+        ctx.fillText(studentName.toUpperCase(), 0, 0);
+    });
+    
+  /*
+  const studentDob = params.studentDob || '17-05-2001';
+    drawRotated(ctx, 390, 748, 0, (ctx) => {
+        ctx.fillStyle = "#C4C6D3";
+        // ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "34px Arial";
+        ctx.fillText(studentDob, 0, 0);
+    });
+    */
+
+    // student email
+    const studentEmail = params.studentEmail || 'UN82728191@un.edu';
+    drawRotated(ctx, 395, 750, 0, (ctx) => {
+        ctx.fillStyle = "#C4C6D3";
+        // ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "34px Arial";
+        ctx.fillText(studentEmail, 0, 0);
+    });
+
+    // student department
+    drawRotated(ctx, 280, 790, 0, (ctx) => {
+        ctx.fillStyle = "#C4C6D3";
+        // ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        const studentDept = params.studentDept || 'Physical Education Department';
+        ctx.font = "bold 34px Arial";
+        ctx.fillText(studentDept, 0, 0);
+    });
+
+    // valid thru
+    const validThru = params.validThru || 'DEC 2028';
+    drawRotated(ctx, 320, 830, 0, (ctx) => {
+        ctx.fillStyle = "#8D9D76";
+        // ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "bold 34px Arial";
+        ctx.fillText(`VALID THRU: ${validThru}`, 0, 0);
+    });
+
+    // barcode
+    const idNumber = params.idNumber || generateRandomID();
+    const barcodeData = JSON.stringify({
+        name: studentName,
+        department: params.studentDept || 'Physical Education Department',
+        idNumber: idNumber,
+        email: studentEmail,
+        schoolName: schoolName
+    });
+
+    const barcodeCanvas = await generateCode128Barcode(
+    idNumber,
+    485,
+    100
+);
+
+if (barcodeCanvas instanceof Object && barcodeCanvas.getContext) {
+    drawRotated(ctx, 262, 860, 0, (ctx) => {
+        ctx.drawImage(barcodeCanvas, 0, 0);
+    });
+} else {
+    console.error('Invalid barcodeCanvas:', barcodeCanvas);
+}
+
+
+    // ID number
+    drawRotated(ctx, 400, 1000, 0, (ctx) => {
+        ctx.fillStyle = "#38393D";
+        // ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.font = "bold 32px Arial";
+        ctx.fillText(`ID: ${idNumber}`, 0, 0);
+    });
+
+    return canvas;
+}
+
+const HAND_CONFIG = {
+    1: {
+        image: 'public/hand1.png',
+        x: 177,
+        y: 53,
+        w: 828,
+        h: 850,
+        rotate: 5.8
+    },
+    2: {
+        image: 'public/hand2.png',
+        x: 158,
+        y: 86,
+        w: 774,
+        h: 820,
+        rotate: -1
+    }
+};
+
+
+async function generateCardInHand(cardCanvas, handType = 1) {
+    const cfg = HAND_CONFIG[handType] || HAND_CONFIG[1];
+
+    const handImg = await loadImage(cfg.image);
+
+    const canvas = createCanvas(handImg.width, handImg.height);
+    const ctx = canvas.getContext('2d');
+
+    // hand
+    ctx.drawImage(handImg, 0, 0);
+
+    // Card
+    const cardImg = await loadImage(cardCanvas.toBuffer());
+
+    // card
+    drawRotated(ctx, cfg.x, cfg.y, cfg.rotate, (ctx) => {
+        const inset = 0;
+        const radius = 0;
+
+        roundRect(ctx, inset, inset, cfg.w, cfg.h, radius);
+        ctx.clip();
+
+        ctx.drawImage(
+            cardImg,
+            0,
+            0,
+            cardImg.width,
+            cardImg.height,
+            inset,
+            inset,
+            cfg.w,
+            cfg.h
+        );
+    });
+
+    return canvas;
+}
+
+
+app.all('/handGen', async (req, res) => {
+    try {
+        const params = req.method === 'GET' ? req.query : req.body;
+
+        
+        const cardCanvas = await generateCard2(params);
+
+        let outputCanvas = cardCanvas;
+
+        
+        if (params.hand == 1 || params.hand == 2) {
+            outputCanvas = await generateCardInHand(
+                cardCanvas,
+                Number(params.hand)
+            );
+        }
+
+        const buffer = outputCanvas.toBuffer('image/png');
+
+        
+        if (params.rawByte == 1) {
+            return res.json({
+                success: true,
+                type: "raw-bytes",
+                format: "image/png",
+                size: buffer.length,
+                data: buffer.toString('base64')
+            });
+        }
+
+        
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader(
+            'Content-Disposition',
+            'inline; filename="id_card.png"'
+        );
+        res.send(buffer);
+
+    } catch (error) {
+        console.error('Error generating card:', error);
+        res.status(500).json({
+            error: 'Failed to generate ID card',
+            message: error.message
+        });
+    }
+});
+
+
+
+//////////// OLD TEMPS
 
 // Load clg data
 let colleges = {};
@@ -274,8 +644,9 @@ const address = (hasCustomName && hasCustomAdd)
     return canvas;
 }
 
-// API
-app.all('/generate', async (req, res) => {
+
+// GEN
+app.all('/gen', async (req, res) => {
     try {
         const params = req.method === 'GET' ? req.query : req.body;
 
@@ -321,11 +692,14 @@ if (showRaw) {
 app.get('/', (req, res) => {
     res.json({
         message: 'Student ID Card Generator API',
-        version: '1.6.9',
+        version: '2.0.0',
+        author: 'BotolBaba',
         endpoints: {
-            generate: '/generate (GET or POST)',
+            generate: '/gen (GET or POST)',
+            handGen: '/handGen (GET or POST)',
+            health: '/health',
         },
-        parameters: {
+        generate_parameters: {
             name: 'required - Student name',
             dob: 'optional - Date of birth (default: 01/25/2001)',
             id: 'optional - ID format (1=numeric, 2=alphanumeric, default: 1)',
@@ -344,6 +718,18 @@ app.get('/', (req, res) => {
             exp_date: 'optional - Expiry date (default: 31 DEC 2025)',
             exp_txt: 'optional - Expiry text (default: Card Expires)',
             rawByte: '2 (Default) - Normal PNG Image. 1 - Show Raw image byte Data.'
+        },
+        handGen_parameters: {
+            schoolName: 'optional - School name (default: Springfield Prep Charter School)',
+            studentName: 'optional - Student name (default: JASON MILLER)',
+            studentEmail: 'optional - Student email (default: UN82728191@un.edu)',
+            studentDept: 'optional - Department (default: Physical Education Department)',
+            validThru: 'optional - Valid thru date (default: DEC 2028)',
+            idNumber: 'optional - ID number (auto-generated if not provided)',
+            schoolLogo: 'optional - School logo URL or base64',
+            studentPhoto: 'optional - Student photo URL or base64',
+            rawByte: 'optional - Set to 1 for JSON response with base64 data',
+            hand: '2 Style Available - Set 1 or 2'
         }
     });
 });
